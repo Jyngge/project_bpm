@@ -1,14 +1,14 @@
-def add_bpm_entry(user_id, bpm):
+def add_bio_metrics_entry(user_id, bpm, oxygen_level):
     try:
         cursor = conn.cursor()
-        query = "INSERT INTO bpm_log (userID, bpm, time_stamp) VALUES (%s, %s, %s)"
+        query = "INSERT INTO bpm_log (userID, bpm, oxygen_level, time_stamp) VALUES (%s, %s, %s, %s)"
         timestamp = datetime.now()
-        cursor.execute(query, (user_id, bpm, timestamp))
+        cursor.execute(query, (user_id, bpm, oxygen_level, timestamp))
         conn.commit()
         cursor.close()
-        print(f"BPM entry added for user {user_id}: {bpm} BPM at {timestamp}")
+        print(f"Bio-metrics entry added for user {user_id}: {bpm} BPM, {oxygen_level}% oxygen at {timestamp}")
     except Exception as e:
-        print(f"Error adding BPM entry: {e}")
+        print(f"Error adding bio-metrics entry: {e}")
 
 
 def get_available_commands():
@@ -18,37 +18,44 @@ def get_available_commands():
         'remove_user': 'Remove an existing user from the system',
         'set_user': 'Set the current user',
         'show_log': 'Show the BPM log of user',
-        'log_bpm': 'Log BPM data from the UART',
+        'log_bio': 'Log Bio-Metrics data from the COM port',
         'output_to_csv': 'Output the BPM log to a CSV file',
         'set_comport': 'Set the COM port and baudrate for UART communication',
+        'help': 'Show available commands',
+        'clear': 'Clear the console output',
         'exit': 'Exit the application'
     }
     return commands
 
-def log_bpm():
+def log_bio():
     global current_user, comport, baudrate  # Use the global variables
 
     if current_user is None:
         print("No user is currently logged in. Please set a user first.")
         return
 
-    print("Entering BPM logging mode. Press 'Esc' to exit.")
+    print("Entering Bio-Metrics logging mode. Press 'Esc' to exit.")
     
     def uart_listener():
         try:
             # Configure the serial port using the global COM port and baud rate
             ser = serial.Serial(comport, baudrate, timeout=1)
-            print(f"Listening for BPM data over UART on {comport} at {baudrate} baud...")
+            print(f"Listening for BPM and oxygen data on {comport} at {baudrate} baud...")
             
             while not exit_flag.is_set():
                 line = ser.readline().decode('utf-8').strip()
                 if line:
                     print(f"Received: {line}")
                     try:
-                        bpm = int(line)  # Parse the BPM value
-                        add_bpm_entry(current_user, bpm)
-                    except ValueError:
-                        print("Invalid data format. Expected a numeric BPM value.")
+                        # Parse the data format "bpm:<value>,oxy:<value>"
+                        data = dict(item.split(":") for item in line.split(","))
+                        bpm = int(data.get("bpm", 0))
+                        oxygen_level = int(data.get("oxy", 0))
+                        
+                        # Add the entry to the database
+                        add_bio_metrics_entry(current_user, bpm, oxygen_level)
+                    except (ValueError, KeyError):
+                        print("Invalid data format. Expected 'bpm:<value>,oxy:<value>'.")
         except serial.SerialException as e:
             print(f"Serial error: {e}")
         finally:
@@ -67,7 +74,7 @@ def log_bpm():
         if msvcrt.kbhit():  # Check if a key has been pressed
             key = msvcrt.getch()  # Get the pressed key
             if key == b'\x1b':  # ASCII code for 'Esc' key
-                print("Exiting BPM logging mode.")
+                print("Exiting Bio-Metrics logging mode.")
                 exit_flag.set()
 
     # Wait for the listener thread to finish
@@ -118,7 +125,7 @@ def output_to_csv():
         if username == "all":
             cursor = conn.cursor()
             query = """
-                SELECT user.username, bpm_log.bpm, bpm_log.time_stamp 
+                SELECT user.username, bpm_log.bpm, bpm_log.oxygen_level, bpm_log.time_stamp 
                 FROM bpm_log 
                 INNER JOIN user ON bpm_log.userID = user.id
             """
@@ -131,11 +138,11 @@ def output_to_csv():
                 return
             
             filename = os.path.join(script_dir, "all_users_bpm_log.csv")
-            header = ["Username", "BPM", "Timestamp"]
+            header = ["Username", "BPM", "Oxygen Level", "Timestamp"]
         else:
             cursor = conn.cursor()
             query = """
-                SELECT bpm_log.bpm, bpm_log.time_stamp 
+                SELECT bpm_log.bpm, bpm_log.oxygen_level, bpm_log.time_stamp 
                 FROM bpm_log 
                 INNER JOIN user ON bpm_log.userID = user.id 
                 WHERE user.username = %s
@@ -149,7 +156,7 @@ def output_to_csv():
                 return
             
             filename = os.path.join(script_dir, f"{username}_bpm_log.csv")
-            header = ["BPM", "Timestamp"]
+            header = ["BPM", "Oxygen Level", "Timestamp"]
 
         # Write the data to a CSV file
         with open(filename, mode="w", newline="", encoding="utf-8") as file:
@@ -173,7 +180,7 @@ def show_log():
         if username == "all":
             cursor = conn.cursor()
             query = """
-                SELECT user.username, bpm_log.bpm, bpm_log.time_stamp 
+                SELECT user.username, bpm_log.bpm, bpm_log.oxygen_level, bpm_log.time_stamp 
                 FROM bpm_log 
                 INNER JOIN user ON bpm_log.userID = user.id
                 ORDER BY user.username, bpm_log.time_stamp
@@ -183,15 +190,15 @@ def show_log():
             cursor.close()
 
             if rows:
-                print("BPM log for all users (sorted by username):")
-                for username, bpm, timestamp in rows:
-                    print(f"Username: {username}, BPM: {bpm}, Timestamp: {timestamp}")
+                print("BPM and Oxygen Level log for all users (sorted by username):")
+                for username, bpm, oxygen_level, timestamp in rows:
+                    print(f"Username: {username}, BPM: {bpm}, Oxygen Level: {oxygen_level}%, Timestamp: {timestamp}")
             else:
                 print("No BPM logs found.")
         else:
             cursor = conn.cursor()
             query = """
-                SELECT bpm_log.bpm, bpm_log.time_stamp 
+                SELECT bpm_log.bpm, bpm_log.oxygen_level, bpm_log.time_stamp 
                 FROM bpm_log 
                 INNER JOIN user ON bpm_log.userID = user.id 
                 WHERE user.username = %s
@@ -202,13 +209,17 @@ def show_log():
             cursor.close()
 
             if rows:
-                print(f"BPM log for user '{username}' (sorted by timestamp):")
-                for bpm, timestamp in rows:
-                    print(f"BPM: {bpm}, Timestamp: {timestamp}")
+                print(f"BPM and Oxygen Level log for user '{username}' (sorted by timestamp):")
+                for bpm, oxygen_level, timestamp in rows:
+                    print(f"BPM: {bpm}, Oxygen Level: {oxygen_level}%, Timestamp: {timestamp}")
             else:
                 print(f"No BPM log found for user '{username}'.")
     except Exception as e:
         print(f"Error fetching BPM log: {e}")
+
+def clear():
+    # Clear the terminal screen
+    os.system('cls' if os.name == 'nt' else 'clear')
 
 def main():
     print("BPM Terminal App")
@@ -224,6 +235,8 @@ def main():
             print("Available commands:")
             for cmd, desc in get_available_commands().items():
                 print(f"{cmd}: {desc}")
+        elif command.lower() == 'clear':
+            clear()
         elif command.lower() == 'add_user':
             try:
                 username = input("Enter username: ").strip()
@@ -251,8 +264,8 @@ def main():
                 print(f"Error removing user: {e}")
         elif command.lower() == 'show_log':
             show_log()
-        elif command.lower() == 'log_bpm':
-            log_bpm()
+        elif command.lower() == 'log_bio':  # Updated reference
+            log_bio()
         elif command.lower() == 'set_comport':
             set_comport()
         elif command.lower() == 'output_to_csv':
@@ -279,9 +292,9 @@ if __name__ == "__main__":
         host="localhost",
         user="root",
         password="JkgRWOrUviyGJbjdAX7V",
-        database="bpm_monitor"
+        database="bio_metric_database"
     )
-
     current_user = None
+
     main()
 
