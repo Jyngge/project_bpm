@@ -1,25 +1,51 @@
+start_time = None  # To track the time of the first entry
+
 def add_bpm_entry(user_id, bpm):
+    global start_time
     try:
         cursor = conn.cursor()
         query = "INSERT INTO bpm_table (userID, bpm, time_stamp) VALUES (%s, %s, %s)"
-        timestamp = datetime.now()
-        cursor.execute(query, (user_id, bpm, timestamp))
+        current_time = datetime.now()
+        
+        # Set the start_time if it's the first entry
+        if start_time is None:
+            start_time = current_time
+        
+        # Calculate elapsed time in seconds
+        elapsed_time = (current_time - start_time).total_seconds()
+        
+        # Log the entry to the database
+        cursor.execute(query, (user_id, bpm, current_time.time()))
         conn.commit()
         cursor.close()
-        print(f"BPM entry added for user {user_id}: {bpm} BPM at {timestamp}")
+        
+        # Print the formatted output
+        print(f"ID: {user_id:<3} BPM: {bpm:>3} Time: {elapsed_time:.2f} seconds")
     except Exception as e:
         print(f"Error adding BPM entry: {e}")
 
 
 def add_oxygen_level_entry(user_id, oxygen_level):
+    global start_time
     try:
         cursor = conn.cursor()
         query = "INSERT INTO oxygen_level_table (userID, oxygen_level, time_stamp) VALUES (%s, %s, %s)"
-        timestamp = datetime.now()
-        cursor.execute(query, (user_id, oxygen_level, timestamp))
+        current_time = datetime.now()
+        
+        # Set the start_time if it's the first entry
+        if start_time is None:
+            start_time = current_time
+        
+        # Calculate elapsed time in seconds
+        elapsed_time = (current_time - start_time).total_seconds()
+        
+        # Log the entry to the database
+        cursor.execute(query, (user_id, oxygen_level, current_time.time()))
         conn.commit()
         cursor.close()
-        print(f"Oxygen level entry added for user {user_id}: {oxygen_level}% at {timestamp}")
+        
+        # Print the formatted output
+        print(f"ID: {user_id:<3} OXY: {oxygen_level:>3} Time: {elapsed_time:.2f} seconds")
     except Exception as e:
         print(f"Error adding oxygen level entry: {e}")
 
@@ -28,7 +54,7 @@ def add_bio_metrics_entry(user_id, bpm, oxygen_level):
     try:
         cursor = conn.cursor()
         query = "INSERT INTO bpm_log (userID, bpm, oxygen_level, time_stamp) VALUES (%s, %s, %s, %s)"
-        timestamp = datetime.now()
+        timestamp = datetime.now().time()  # Use .time() to get only the time
         cursor.execute(query, (user_id, bpm, oxygen_level, timestamp))
         conn.commit()
         cursor.close()
@@ -38,7 +64,7 @@ def add_bio_metrics_entry(user_id, bpm, oxygen_level):
 
 
 def get_available_commands():
-    # Define the list of available commands
+
     commands = {
         'add_user': 'Add a new user to the system',
         'remove_user': 'Remove an existing user from the system',
@@ -48,6 +74,7 @@ def get_available_commands():
         'log_bio': 'Log Bio-Metrics data from the COM port',
         'output_to_csv': 'Output the BPM and oxygen logs to a CSV file',
         'set_comport': 'Set the COM port and baudrate for UART communication',
+        'delete_logs': 'Delete logs for a specific user or all users',  # New command
         'help': 'Show available commands',
         'clear': 'Clear the console output',
         'exit': 'Exit the application'
@@ -72,17 +99,43 @@ def log_bio():
             while not exit_flag.is_set():
                 line = ser.readline().decode('utf-8').strip()
                 if line:
-                    print(f"Received: {line}")
+                    
                     try:
-                        # Check if the data is for BPM
-                        if line.startswith("bpm:"):
-                            bpm = int(line.split(":")[1])
+                        # Split the line into parts if both bpm and oxy are present
+                        if "bpm:" in line and "oxy:" in line:
+                            # Ensure the order of bpm and oxy doesn't matter
+                            bpm_index = line.find("bpm:")
+                            oxy_index = line.find("oxy:")
+                            
+                            if bpm_index < oxy_index:
+                                bpm_part = line[bpm_index:oxy_index].strip()
+                                oxy_part = line[oxy_index:].strip()
+                            else:
+                                oxy_part = line[oxy_index:bpm_index].strip()
+                                bpm_part = line[bpm_index:].strip()
+                            
+                            # Process bpm
+                            if bpm_part.startswith("bpm:"):
+                                bpm = int(bpm_part.split(":")[1].strip())
+                                add_bpm_entry(current_user, bpm)
+                            
+                            # Process oxygen level
+                            if oxy_part.startswith("oxy:"):
+                                oxygen_level = int(oxy_part.split(":")[1].strip())
+                                add_oxygen_level_entry(current_user, oxygen_level)
+                        
+                        # Handle cases where only bpm is present
+                        elif line.startswith("bpm:"):
+                            bpm = int(line.split(":")[1].strip())
                             add_bpm_entry(current_user, bpm)
+                        
+                        # Handle cases where only oxygen level is present
                         elif line.startswith("oxy:"):
-                            oxygen_level = int(line.split(":")[1])
+                            oxygen_level = int(line.split(":")[1].strip())
                             add_oxygen_level_entry(current_user, oxygen_level)
+                        
                         else:
-                            print("Invalid data format. Expected 'bpm:<value>' or 'oxy:<value>'.")
+                            print("Invalid data format. Expected 'bpm:<value>', 'oxy:<value>', or both.")
                     except (ValueError, IndexError):
                         print("Error parsing data. Ensure the format is correct.")
         except serial.SerialException as e:
@@ -348,6 +401,37 @@ def show_oxygen_log():
     except Exception as e:
         print(f"Error fetching oxygen level logs: {e}")
 
+def delete_logs():
+    try:
+        # Prompt the user to enter a username or 'all'
+        username = input("Enter the username to delete logs for, or 'all' to delete logs for all users: ").strip().lower()
+
+        if username == "all":
+            # Delete logs for all users
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM bpm_table")
+            cursor.execute("DELETE FROM oxygen_level_table")
+            conn.commit()
+            cursor.close()
+            print("All logs have been deleted.")
+        else:
+            # Delete logs for a specific user
+            cursor = conn.cursor()
+            query = "SELECT id FROM user WHERE username = %s"
+            cursor.execute(query, (username,))
+            result = cursor.fetchone()
+            if result:
+                user_id = result[0]
+                cursor.execute("DELETE FROM bpm_table WHERE userID = %s", (user_id,))
+                cursor.execute("DELETE FROM oxygen_level_table WHERE userID = %s", (user_id,))
+                conn.commit()
+                cursor.close()
+                print(f"Logs for user '{username}' have been deleted.")
+            else:
+                print(f"User '{username}' not found.")
+    except Exception as e:
+        print(f"Error deleting logs: {e}")
+
 def clear():
     # Clear the terminal screen
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -403,6 +487,8 @@ def main():
             set_comport()
         elif command.lower() == 'output_to_csv':
             output_to_csv()
+        elif command.lower() == 'delete_logs':
+            delete_logs()
         else:
             print(f"Unknown command: {command}. Type 'help' for a list of commands.")
 
@@ -417,7 +503,7 @@ if __name__ == "__main__":
     import csv
 
     # Initialize global variables for COM port and baud rate
-    comport = "COM1"  # Default COM port
+    comport = "COM5"  # Default COM port
     baudrate = 115200   # Default baud rate
 
     # Database connection
@@ -427,7 +513,7 @@ if __name__ == "__main__":
         password="JkgRWOrUviyGJbjdAX7V",
         database="bio_metric_database"
     )
-    current_user = None
+    current_user = 7   # Default user ID (can be set to None if no user is logged in)
 
     main()
 

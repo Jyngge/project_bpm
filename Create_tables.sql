@@ -12,7 +12,7 @@ CREATE TABLE bpm_table (
     id INT AUTO_INCREMENT PRIMARY KEY,
     userID INT NOT NULL,
     bpm INT NOT NULL,
-    time_stamp DATETIME NOT NULL,
+    time_stamp TIME NOT NULL,
     FOREIGN KEY (userID) REFERENCES user(id)
 );
 
@@ -20,6 +20,6 @@ CREATE TABLE oxygen_level_table (
     id INT AUTO_INCREMENT PRIMARY KEY,
     userID INT NOT NULL,
     oxygen_level INT NOT NULL,
-    time_stamp DATETIME NOT NULL,
+    time_stamp TIME NOT NULL,
     FOREIGN KEY (userID) REFERENCES user(id)
 );
