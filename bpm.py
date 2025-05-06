@@ -148,111 +148,115 @@ def output_to_csv():
         else:
             script_dir = os.path.dirname(os.path.abspath(__file__))
 
+        # Prompt the user to choose the type of data to export
+        data_type = input("Enter 'bpm' to export BPM logs, 'oxygen' to export oxygen level logs, or 'all' to export both: ").strip().lower()
+
+        if data_type not in ['bpm', 'oxygen', 'all']:
+            print("Invalid option. Please enter 'bpm', 'oxygen', or 'all'.")
+            return
+
         # Prompt the user to enter a username or 'all'
-        username = input("Enter the username or 'all' to export all users' logs: ").strip().lower()
-        
-        if username == "all":
-            cursor = conn.cursor()
-            query = """
-                SELECT user.username, bpm_table.bpm, oxygen_level_table.oxygen_level, bpm_table.time_stamp 
-                FROM bpm_table 
-                INNER JOIN oxygen_level_table 
-                ON bpm_table.userID = oxygen_level_table.userID AND bpm_table.time_stamp = oxygen_level_table.time_stamp
-                INNER JOIN user ON bpm_table.userID = user.id
-            """
-            cursor.execute(query)
-            rows = cursor.fetchall()
-            cursor.close()
-            
-            if not rows:
-                print("No logs found.")
-                return
-            
-            filename = os.path.join(script_dir, "all_users_bio_metrics_log.csv")
-            header = ["Username", "BPM", "Oxygen Level", "Timestamp"]
-        else:
-            cursor = conn.cursor()
-            query = """
-                SELECT bpm_table.bpm, oxygen_level_table.oxygen_level, bpm_table.time_stamp 
-                FROM bpm_table 
-                INNER JOIN oxygen_level_table 
-                ON bpm_table.userID = oxygen_level_table.userID AND bpm_table.time_stamp = oxygen_level_table.time_stamp
-                INNER JOIN user ON bpm_table.userID = user.id 
-                WHERE user.username = %s
-            """
-            cursor.execute(query, (username,))
-            rows = cursor.fetchall()
-            cursor.close()
-            
-            if not rows:
-                print(f"No log found for user '{username}'.")
-                return
-            
-            filename = os.path.join(script_dir, f"{username}_bio_metrics_log.csv")
-            header = ["BPM", "Oxygen Level", "Timestamp"]
+        username = input("Enter the username or 'all' to export logs: ").strip().lower()
 
-        # Write the data to a CSV file
-        with open(filename, mode="w", newline="", encoding="utf-8") as file:
-            writer = csv.writer(file)
-            
-            # Write the header
-            writer.writerow(header)
-            
-            # Write the rows
-            writer.writerows(rows)
-        
-        print(f"Log successfully exported to '{filename}'.")
-    except Exception as e:
-        print(f"Error exporting log to CSV: {e}")
+        if data_type in ['bpm', 'all']:
+            # Export BPM logs
+            if username == "all":
+                cursor = conn.cursor()
+                query = """
+                    SELECT user.username, bpm_table.bpm, bpm_table.time_stamp 
+                    FROM bpm_table 
+                    INNER JOIN user ON bpm_table.userID = user.id
+                    ORDER BY user.username, bpm_table.time_stamp
+                """
+                cursor.execute(query)
+                rows = cursor.fetchall()
+                cursor.close()
 
-def show_log():
-    try:
-        # Prompt the user to enter a username or 'all'
-        username = input("Enter username to view logs or 'all' to view all users' logs: ").strip().lower()
-
-        if username == "all":
-            cursor = conn.cursor()
-            query = """
-                SELECT user.username, bpm_table.bpm, oxygen_level_table.oxygen_level, bpm_table.time_stamp 
-                FROM bpm_table 
-                INNER JOIN oxygen_level_table 
-                ON bpm_table.userID = oxygen_level_table.userID AND bpm_table.time_stamp = oxygen_level_table.time_stamp
-                INNER JOIN user ON bpm_table.userID = user.id
-                ORDER BY user.username, bpm_table.time_stamp
-            """
-            cursor.execute(query)
-            rows = cursor.fetchall()
-            cursor.close()
-
-            if rows:
-                print("BPM and Oxygen Level log for all users (sorted by username):")
-                for username, bpm, oxygen_level, timestamp in rows:
-                    print(f"Username: {username}, BPM: {bpm}, Oxygen Level: {oxygen_level}%, Timestamp: {timestamp}")
+                if not rows:
+                    print("No BPM logs found.")
+                else:
+                    filename = os.path.join(script_dir, f"bpm_logs_all_users_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+                    header = ["Username", "BPM", "Timestamp"]
+                    with open(filename, mode="w", newline="", encoding="utf-8") as file:
+                        writer = csv.writer(file)
+                        writer.writerow(header)
+                        writer.writerows(rows)
+                    print(f"BPM logs successfully exported to '{filename}'.")
             else:
-                print("No logs found.")
-        else:
-            cursor = conn.cursor()
-            query = """
-                SELECT bpm_table.bpm, oxygen_level_table.oxygen_level, bpm_table.time_stamp 
-                FROM bpm_table 
-                INNER JOIN oxygen_level_table 
-                ON bpm_table.userID = oxygen_level_table.userID AND bpm_table.time_stamp = oxygen_level_table.time_stamp
-                INNER JOIN user ON bpm_table.userID = user.id 
-                WHERE user.username = %s
-                ORDER BY bpm_table.time_stamp
-            """
-            cursor.execute(query, (username,))
-            rows = cursor.fetchall()
-            cursor.close()
+                cursor = conn.cursor()
+                query = """
+                    SELECT bpm_table.bpm, bpm_table.time_stamp 
+                    FROM bpm_table 
+                    INNER JOIN user ON bpm_table.userID = user.id 
+                    WHERE user.username = %s
+                    ORDER BY bpm_table.time_stamp
+                """
+                cursor.execute(query, (username,))
+                rows = cursor.fetchall()
+                cursor.close()
 
-            if rows:
-                print(f"BPM and Oxygen Level log for user '{username}' (sorted by timestamp):")
-                for bpm, oxygen_level, timestamp in rows:
-                    print(f"BPM: {bpm}, Oxygen Level: {oxygen_level}%, Timestamp: {timestamp}")
+                if not rows:
+                    print(f"No BPM logs found for user '{username}'.")
+                else:
+                    filename = os.path.join(script_dir, f"bpm_logs_{username}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+                    header = ["BPM", "Timestamp"]
+                    with open(filename, mode="w", newline="", encoding="utf-8") as file:
+                        writer = csv.writer(file)
+                        writer.writerow(header)
+                        writer.writerows(rows)
+                    print(f"BPM logs successfully exported to '{filename}'.")
+
+        if data_type in ['oxygen', 'all']:
+            # Export oxygen level logs
+            if username == "all":
+                cursor = conn.cursor()
+                query = """
+                    SELECT user.username, oxygen_level_table.oxygen_level, oxygen_level_table.time_stamp 
+                    FROM oxygen_level_table 
+                    INNER JOIN user ON oxygen_level_table.userID = user.id
+                    ORDER BY user.username, oxygen_level_table.time_stamp
+                """
+                cursor.execute(query)
+                rows = cursor.fetchall()
+                cursor.close()
+
+                if not rows:
+                    print("No oxygen level logs found.")
+                else:
+                    filename = os.path.join(script_dir, f"oxygen_logs_all_users_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+                    header = ["Username", "Oxygen Level", "Timestamp"]
+                    with open(filename, mode="w", newline="", encoding="utf-8") as file:
+                        writer = csv.writer(file)
+                        writer.writerow(header)
+                        writer.writerows(rows)
+                    print(f"Oxygen level logs successfully exported to '{filename}'.")
             else:
-                print(f"No log found for user '{username}'.")
+                cursor = conn.cursor()
+                query = """
+                    SELECT oxygen_level_table.oxygen_level, oxygen_level_table.time_stamp 
+                    FROM oxygen_level_table 
+                    INNER JOIN user ON oxygen_level_table.userID = user.id 
+                    WHERE user.username = %s
+                    ORDER BY oxygen_level_table.time_stamp
+                """
+                cursor.execute(query, (username,))
+                rows = cursor.fetchall()
+                cursor.close()
+
+                if not rows:
+                    print(f"No oxygen level logs found for user '{username}'.")
+                else:
+                    filename = os.path.join(script_dir, f"oxygen_logs_{username}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+                    header = ["Oxygen Level", "Timestamp"]
+                    with open(filename, mode="w", newline="", encoding="utf-8") as file:
+                        writer = csv.writer(file)
+                        writer.writerow(header)
+                        writer.writerows(rows)
+                    print(f"Oxygen level logs successfully exported to '{filename}'.")
+
     except Exception as e:
-        print(f"Error fetching logs: {e}")
+        print(f"Error exporting logs to CSV: {e}")
+
 
 def show_bpm_log():
     try:
