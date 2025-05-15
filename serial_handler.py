@@ -1,10 +1,36 @@
+# *****************************************************************************
+# University of Southern Denmark
+# Embedded C Programming (ECP)
+#
+# MODULENAME.: serial_handler.py
+#
+# PROJECT....: Semester Project 4
+#
+# DESCRIPTION:  A simple terminal application for collecting and and exporting
+#               Biometric data.
+#
+# Change Log:
+# *****************************************************************************
+# Date    Id          Change
+# 020525  Majur22     Module created.
+# 
+# *****************************************************************************
+
 import serial
 import threading
+import msvcrt
 from datetime import datetime
 from config import COMPORT, BAUDRATE
 from database import log_bpm, log_oxygen_level
 
 def log_bio(current_user_id):
+# **********************************************
+# Input    : Current user set ID. ID's are defined in the database.
+# Output   : Sends the data to the database.
+# Function : Activates the serial port and listens for incoming data.
+#            The data is expected to be in the format "bpm:<value>oxy:<value>".
+#            The function will log the data to the database under the user set by the program.
+# **********************************************
     print("Entering Bio-Metrics logging mode. Press 'Esc' to exit.")
     exit_flag = threading.Event()
 
@@ -49,7 +75,6 @@ def log_bio(current_user_id):
     listener_thread = threading.Thread(target=uart_listener)
     listener_thread.start()
 
-    import msvcrt
     while not exit_flag.is_set():
         if msvcrt.kbhit():
             key = msvcrt.getch()

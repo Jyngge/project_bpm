@@ -1,21 +1,50 @@
+# *****************************************************************************
+# University of Southern Denmark
+# Embedded C Programming (ECP)
+#
+# MODULENAME.: commands.py
+#
+# PROJECT....: Semester Project 4
+#
+# DESCRIPTION:  A simple terminal application for collecting and and exporting
+#               Biometric data.
+#
+# Change Log:
+# *****************************************************************************
+# Date    Id          Change
+# 020525  Majur22     Module created.
+# 
+# *****************************************************************************
+
 import os
 import sys
 import csv
 from datetime import datetime
 from config import save_comport, COMPORT, BAUDRATE
 from database import (
-    add_user, remove_user, get_user_id, log_bpm, log_oxygen_level,
-    get_bpm_log, get_oxygen_level_log, get_all_bpm_logs, get_user_bpm_logs,
+    add_user, remove_user, get_user_id, get_all_bpm_logs, get_user_bpm_logs,
     get_all_oxygen_logs, get_user_oxygen_logs, delete_logs
 )
 from serial_handler import log_bio
 
-current_user = {'id': None}
+
 
 def clear():
+# **********************************************
+# Input    : 
+# Output   :
+# Function : Clear the console output
+# **********************************************
     os.system('cls' if os.name == 'nt' else 'clear')
 
+
 def get_available_commands():
+# **********************************************
+# Input    : 
+# Output   :
+# Function : Output a dictionary of available commands.
+# **********************************************
+    
     return {
         'add_user': 'Add a new user to the system',
         'remove_user': 'Remove an existing user from the system',
@@ -32,6 +61,11 @@ def get_available_commands():
     }
 
 def execute_command(command):
+# **********************************************
+# Input    : Commands shown in the get_available_commands function.
+# Output   : 
+# Function : Main function to execute commands based on user input.
+# **********************************************
     cmd = command.lower()
     if cmd == 'add_user':
         username = input("Enter username: ").strip()
@@ -126,7 +160,13 @@ def execute_command(command):
     else:
         print(f"Unknown command: {command}. Type 'help' for a list of commands.")
 
+
 def output_to_csv():
+# **********************************************
+# Input    : 
+# Output   :
+# Function : Outputs the BPM and oxygen logs to a CSV file for a user.
+# **********************************************
     try:
         if getattr(sys, 'frozen', False):
             script_dir = os.path.dirname(sys.executable)
@@ -193,3 +233,6 @@ def output_to_csv():
                     print(f"Oxygen level logs successfully exported to '{filename}'.")
     except Exception as e:
         print(f"Error exporting logs to CSV: {e}")
+
+
+current_user = {'id': None}        
