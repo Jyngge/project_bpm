@@ -20,7 +20,6 @@
 import mysql.connector
 from config import DB_CONFIG, save_db_config, load_db_config
 
-
 def prompt_db_config():
 # **********************************************
 # Input    : 
@@ -209,4 +208,5 @@ def delete_logs(user_id=None):
     cursor.close()
 
 
-    conn = connect_db()
+
+conn = connect_db()
