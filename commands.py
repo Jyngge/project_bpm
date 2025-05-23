@@ -4,16 +4,12 @@
 #
 # MODULENAME.: commands.py
 #
-# PROJECT....: Semester Project 4
+# PROJECT....: PPG pulsefreq. and -oximetry meas.
 #
-# DESCRIPTION:  A simple terminal application for collecting and and exporting
-#               Biometric data.
-#
-# Change Log:
-# *****************************************************************************
-# Date    Id          Change
-# 020525  Majur22     Module created.
-# 
+# DESCRIPTION:  
+# A simple terminal application for collecting and exporting
+# biometric data. This module handles command execution and user
+# interaction through the terminal interface.
 # *****************************************************************************
 
 import os
@@ -28,44 +24,58 @@ from database import (
 from serial_handler import log_bio
 
 
-
 def clear():
-# **********************************************
-# Input    : 
-# Output   :
-# Function : Clear the console output
-# **********************************************
+    """
+    *******************************
+    Function: clear
+    -------------------
+    Clears the terminal screen output.
+
+    Input:  None
+    Output: None
+    *******************************
+    """
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
 def get_available_commands():
-# **********************************************
-# Input    : 
-# Output   :
-# Function : Output a dictionary of available commands.
-# **********************************************
-    
+    """
+    *******************************
+    Function: get_available_commands
+    -------------------
+    Returns a dictionary of available commands and their descriptions.
+
+    Input:  None
+    Output: dict[str, str]
+    *******************************
+    """
     return {
-        'add_user': 'Add a new user to the system',
-        'remove_user': 'Remove an existing user from the system',
-        'set_user': 'Set the current user',
+        'add_user':     'Add a new user to the system',
+        'remove_user':  'Remove an existing user from the system',
+        'set_user':     'Set the current user',
         'show_bpm_log': 'Show the BPM log of users',
         'show_oxygen_log': 'Show the oxygen level log of users',
-        'log_bio': 'Log Bio-Metrics data from the COM port',
-        'output_to_csv': 'Output the BPM and oxygen logs to a CSV file',
-        'set_comport': 'Set the COM port and baudrate for UART communication',
-        'delete_logs': 'Delete logs for a specific user or all users',
-        'help': 'Show available commands',
-        'clear': 'Clear the console output',
-        'exit': 'Exit the application'
+        'log_bio':      'Log Bio-Metrics data from the COM port',
+        'output_to_csv':'Output the BPM and oxygen logs to a CSV file',
+        'set_comport':  'Set the COM port and baudrate for UART communication',
+        'delete_logs':  'Delete logs for a specific user or all users',
+        'help':         'Show available commands',
+        'clear':        'Clear the console output',
+        'exit':         'Exit the application'
     }
 
+
 def execute_command(command):
-# **********************************************
-# Input    : Commands shown in the get_available_commands function.
-# Output   : 
-# Function : Main function to execute commands based on user input.
-# **********************************************
+    """
+    *******************************
+    Function: execute_command
+    -------------------
+    Processes user input and executes the appropriate action based on the command.
+
+    Input:  command (str) - The user's input command
+    Output: None
+    *******************************
+    """
     cmd = command.lower()
     if cmd == 'add_user':
         username = input("Enter username: ").strip()
@@ -162,11 +172,17 @@ def execute_command(command):
 
 
 def output_to_csv():
-# **********************************************
-# Input    : 
-# Output   :
-# Function : Outputs the BPM and oxygen logs to a CSV file for a user.
-# **********************************************
+    """
+    *******************************
+    Function: output_to_csv
+    -------------------
+    Exports BPM and/or oxygen logs to a timestamped CSV file.
+    User can choose to export data for a specific user or all users.
+
+    Input:  None
+    Output: CSV file(s) created in script directory
+    *******************************
+    """
     try:
         if getattr(sys, 'frozen', False):
             script_dir = os.path.dirname(sys.executable)
@@ -234,5 +250,5 @@ def output_to_csv():
     except Exception as e:
         print(f"Error exporting logs to CSV: {e}")
 
-
-current_user = {'id': None}        
+# ******************** Variables ************************
+current_user = {'id': None}

@@ -1,5 +1,4 @@
-terminal program for heart reate monitor
-build for student project
+terminal program for student project in PPG pulsefreq. and -oximetry meas.
 
 download packeges with pip
 required packages: 

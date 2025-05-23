@@ -4,28 +4,29 @@
 #
 # MODULENAME.: database.py
 #
-# PROJECT....: Semester Project 4
+# PROJECT....: PPG pulsefreq. and -oximetry meas.
 #
-# DESCRIPTION:  A simple terminal application for collecting and and exporting
-#               Biometric data.
-#
-# Change Log:
+# DESCRIPTION:  
+# A simple terminal application for collecting and exporting
+# biometric data. This module handles all interactions with
+# the MySQL database, including user and data management.
 # *****************************************************************************
-# Date    Id          Change
-# 020525  Majur22     Module created.
-# 
-# *****************************************************************************
-
 
 import mysql.connector
 from config import DB_CONFIG, save_db_config, load_db_config
 
+
 def prompt_db_config():
-# **********************************************
-# Input    : 
-# Output   :
-# Function : Prompts the user for database connection settings if the connection fails.
-# **********************************************
+    """
+    *******************************
+    Function: prompt_db_config
+    -------------------
+    Prompts the user for database connection settings if the current config fails.
+
+    Input:  None
+    Output: dict - New database configuration
+    *******************************
+    """
     print("Database connection failed. Please enter new database settings:")
     host = input("Host (default: localhost): ").strip() or "localhost"
     user = input("User (default: root): ").strip() or "root"
@@ -40,12 +41,19 @@ def prompt_db_config():
     save_db_config(db_config)
     return db_config
 
+
 def connect_db():
-# **********************************************
-# Input    : 
-# Output   :
-# Function : Connects to the MySQL database using the provided configuration.
-# **********************************************
+    """
+    *******************************
+    Function: connect_db
+    -------------------
+    Attempts to connect to the MySQL database using config from file.
+    If connection fails, prompts user for updated settings.
+
+    Input:  None
+    Output: mysql.connector.MySQLConnection
+    *******************************
+    """
     config = DB_CONFIG
     while True:
         try:
@@ -56,35 +64,52 @@ def connect_db():
 
 
 def add_user(username, age):
-# **********************************************
-# Input    : Username and age of the user.
-# Output   :
-# Function : Adds a new user to the database.
-# **********************************************
+    """
+    *******************************
+    Function: add_user
+    -------------------
+    Adds a new user with the given username and age to the database.
+
+    Input:  username (str), age (int)
+    Output: None
+    *******************************
+    """
     cursor = conn.cursor()
     query = "INSERT INTO user (username, age) VALUES (%s, %s)"
     cursor.execute(query, (username, age))
     conn.commit()
     cursor.close()
 
+
 def remove_user(username):
-# **********************************************
-# Input    : Username of the user to be removed.
-# Output   :
-# Function : Removes a user from the database.
-# **********************************************
+    """
+    *******************************
+    Function: remove_user
+    -------------------
+    Deletes a user from the database by username.
+
+    Input:  username (str)
+    Output: None
+    *******************************
+    """
     cursor = conn.cursor()
     query = "DELETE FROM user WHERE username = %s"
     cursor.execute(query, (username,))
     conn.commit()
     cursor.close()
 
+
 def get_user_id(username):
-# **********************************************
-# Input    : Username of the user.
-# Output   : User ID of the user.
-# Function : Retrieves the user ID from the database based on the username.
-# **********************************************
+    """
+    *******************************
+    Function: get_user_id
+    -------------------
+    Retrieves a user’s ID based on their username.
+
+    Input:  username (str)
+    Output: int or None - User ID
+    *******************************
+    """
     cursor = conn.cursor()
     query = "SELECT id FROM user WHERE username = %s"
     cursor.execute(query, (username,))
@@ -92,24 +117,36 @@ def get_user_id(username):
     cursor.close()
     return result[0] if result else None
 
+
 def log_bpm(user_id, bpm, timestamp):
-# **********************************************
-# Input    : User ID, BPM value, and timestamp.
-# Output   :
-# Function : Logs the BPM data to the database.
-# **********************************************
+    """
+    *******************************
+    Function: log_bpm
+    -------------------
+    Logs a BPM value for a user into the bpm_table.
+
+    Input:  user_id (int), bpm (int), timestamp (datetime)
+    Output: None
+    *******************************
+    """
     cursor = conn.cursor()
     query = "INSERT INTO bpm_table (userID, bpm, time_stamp) VALUES (%s, %s, %s)"
     cursor.execute(query, (user_id, bpm, timestamp))
     conn.commit()
     cursor.close()
 
+
 def log_oxygen_level(user_id, oxygen_level, timestamp):
-# **********************************************
-# Input    : User ID, oxygen level value, and timestamp.
-# Output   :
-# Function : Logs the oxygen level data to the database.
-# **********************************************
+    """
+    *******************************
+    Function: log_oxygen_level
+    -------------------
+    Logs an oxygen level for a user into the oxygen_level_table.
+
+    Input:  user_id (int), oxygen_level (int), timestamp (datetime)
+    Output: None
+    *******************************
+    """
     cursor = conn.cursor()
     query = "INSERT INTO oxygen_level_table (userID, oxygen_level, time_stamp) VALUES (%s, %s, %s)"
     cursor.execute(query, (user_id, oxygen_level, timestamp))
@@ -118,11 +155,16 @@ def log_oxygen_level(user_id, oxygen_level, timestamp):
 
 
 def get_all_bpm_logs():
-# **********************************************
-# Input    :
-# Output   :
-# Function : Retrieves all BPM logs from the database. 
-# **********************************************
+    """
+    *******************************
+    Function: get_all_bpm_logs
+    -------------------
+    Retrieves BPM logs for all users.
+
+    Input:  None
+    Output: list of tuples (username, bpm, timestamp)
+    *******************************
+    """
     cursor = conn.cursor()
     query = """
         SELECT user.username, bpm_table.bpm, bpm_table.time_stamp 
@@ -135,12 +177,18 @@ def get_all_bpm_logs():
     cursor.close()
     return rows
 
+
 def get_user_bpm_logs(username):
-# **********************************************
-# Input    : Username of the user.
-# Output   :
-# Function : Retrieves BPM logs for a specific user from the database.
-# **********************************************
+    """
+    *******************************
+    Function: get_user_bpm_logs
+    -------------------
+    Retrieves BPM logs for a specific user.
+
+    Input:  username (str)
+    Output: list of tuples (bpm, timestamp)
+    *******************************
+    """
     cursor = conn.cursor()
     query = """
         SELECT bpm_table.bpm, bpm_table.time_stamp 
@@ -154,12 +202,18 @@ def get_user_bpm_logs(username):
     cursor.close()
     return rows
 
+
 def get_all_oxygen_logs():
-# **********************************************
-# Input    : 
-# Output   :
-# Function : Retrieves all oxygen level logs from the database.
-# **********************************************
+    """
+    *******************************
+    Function: get_all_oxygen_logs
+    -------------------
+    Retrieves oxygen level logs for all users.
+
+    Input:  None
+    Output: list of tuples (username, oxygen_level, timestamp)
+    *******************************
+    """
     cursor = conn.cursor()
     query = """
         SELECT user.username, oxygen_level_table.oxygen_level, oxygen_level_table.time_stamp 
@@ -172,12 +226,18 @@ def get_all_oxygen_logs():
     cursor.close()
     return rows
 
+
 def get_user_oxygen_logs(username):
-# **********************************************
-# Input    : 
-# Output   :
-# Function : Retrieves oxygen level logs for a specific user from the database.
-# **********************************************
+    """
+    *******************************
+    Function: get_user_oxygen_logs
+    -------------------
+    Retrieves oxygen level logs for a specific user.
+
+    Input:  username (str)
+    Output: list of tuples (oxygen_level, timestamp)
+    *******************************
+    """
     cursor = conn.cursor()
     query = """
         SELECT oxygen_level_table.oxygen_level, oxygen_level_table.time_stamp 
@@ -191,12 +251,18 @@ def get_user_oxygen_logs(username):
     cursor.close()
     return rows
 
+
 def delete_logs(user_id=None):
-# **********************************************
-# Input    : User ID of the user whose logs are to be deleted. If None, all logs will be deleted.
-# Output   :
-# Function : Deletes all logs from the database or logs for a specific user.
-# **********************************************
+    """
+    *******************************
+    Function: delete_logs
+    -------------------
+    Deletes all logs, or logs for a specific user, from the database.
+
+    Input:  user_id (int or None)
+    Output: None
+    *******************************
+    """
     cursor = conn.cursor()
     if user_id is None:
         cursor.execute("DELETE FROM bpm_table")
@@ -208,5 +274,5 @@ def delete_logs(user_id=None):
     cursor.close()
 
 
-
+# ******************** Runtime Initialization ********************
 conn = connect_db()

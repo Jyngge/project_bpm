@@ -4,27 +4,44 @@
 #
 # MODULENAME.: config.py
 #
-# PROJECT....: Semester Project 4
+# PROJECT....: PPG pulsefreq. and -oximetry meas.
 #
-# DESCRIPTION:  A simple terminal application for collecting and and exporting
-#               Biometric data.
+# DESCRIPTION:  
+# A simple terminal application for collecting and exporting
+# Biometric data. This module manages configuration settings for
+# serial communication and database access.
 #
-# Change Log:
-# *****************************************************************************
-# Date    Id          Change
-# 020525  Majur22     Module created.
-# 
 # *****************************************************************************
 
 import os
 import json
 
+# ********************** Constants ************************
+COMPORT_CFG = "comport.cfg"
+DEFAULT_COMPORT = "COM5"
+DEFAULT_BAUDRATE = 115200
+
+DB_CFG = "db.cfg"
+DEFAULT_DB_CONFIG = {
+    'host': "localhost",
+    'user': "root",
+    'password': "",
+    'database': ""
+}
+
+
 def load_comport():
-# **********************************************
-# Input    : Contents of the comport.cfg file if it exists.
-# Output   :
-# Function : Reads the contents of the comport.cfg file and returns the COM port and baud rate.
-# **********************************************
+    """
+    *******************************
+    Function: load_comport
+    -----------------------
+    Reads the contents of the comport.cfg file and returns the COM port 
+    and baud rate settings.
+
+    Input:  None
+    Output: Tuple (comport, baudrate)
+    *******************************
+    """
     if os.path.exists(COMPORT_CFG):
         try:
             with open(COMPORT_CFG, "r") as f:
@@ -34,22 +51,35 @@ def load_comport():
             pass
     return DEFAULT_COMPORT, DEFAULT_BAUDRATE
 
+
 def save_comport(comport, baudrate):
-# **********************************************
-# Input    : 
-# Output   :
-# Function : Saves the COM port and baud rate to a cfg file.
-# **********************************************
+    """
+    *******************************
+    Function: save_comport
+    -----------------------
+    Saves the provided COM port and baud rate to a configuration file.
+
+    Input:  comport   - COM port string (e.g. "COM3")
+            baudrate  - Baud rate integer (e.g. 115200)
+    Output: None
+    *******************************
+    """
     with open(COMPORT_CFG, "w") as f:
         json.dump({"comport": comport, "baudrate": baudrate}, f)
 
 
 def load_db_config():
-# **********************************************
-# Input    : 
-# Output   :
-# Function : Reads the contents of the db.cfg file if it exists.
-# **********************************************
+    """
+    *******************************
+    Function: load_db_config
+    -------------------------
+    Loads the database configuration from the db.cfg file if it exists.
+    Returns default values if the file is missing or unreadable.
+
+    Input:  None
+    Output: Dictionary containing database config
+    *******************************
+    """
     if os.path.exists(DB_CFG):
         try:
             with open(DB_CFG, "r") as f:
@@ -64,28 +94,22 @@ def load_db_config():
             pass
     return DEFAULT_DB_CONFIG.copy()
 
+
 def save_db_config(db_config):
-# **********************************************
-# Input    : 
-# Output   :
-# Function : Saves the database configuration to a cfg file.
-# **********************************************
+    """
+    *******************************
+    Function: save_db_config
+    -------------------------
+    Saves the given database configuration dictionary to a file.
+
+    Input:  db_config - Dictionary containing keys: host, user, password, database
+    Output: None
+    *******************************
+    """
     with open(DB_CFG, "w") as f:
         json.dump(db_config, f)
 
 
-
-COMPORT_CFG = "comport.cfg"
-DEFAULT_COMPORT = "COM5"
-DEFAULT_BAUDRATE = 115200
+# ********************** Runtime Initialization ***********************
 COMPORT, BAUDRATE = load_comport()
-
-DB_CFG = "db.cfg"
-DEFAULT_DB_CONFIG = {
-    'host': "localhost",
-    'user': "root",
-    'password': "",
-    'database': ""
-}
 DB_CONFIG = load_db_config()
-
